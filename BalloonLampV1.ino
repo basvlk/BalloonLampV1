@@ -84,7 +84,7 @@ byte IRModeState = 0;
 byte PrevIRModeState = 0; // To carry over the previous mode to be able to iterate through table
 unsigned long LastIRReceived = 0;
 unsigned long IRMuteTime = 800; //once a button click is read, it's ignored for ButtenClickTimer ms
-byte IRModeModeTable[10] = { 20, 21, 22, 23, 6, 7, 1, 20,21, 22 }; // determines which presets, and in what order are cycled
+byte IRModeModeTable[10] = { 20, 21, 22, 23, 6, 7, 1, 20, 21, 22 }; // determines which presets, and in what order are cycled
 
 
 //DIAGNOSTIC TOOLS
@@ -112,6 +112,10 @@ byte ReadRuns = 0; // if not all data is read in in one single main loop iterati
 byte Mode = 0; // Mode for the program - only updated when data is validated.
 byte TempMode = 0; // temporary storage for 'Mode' until data is validated
 byte DataLength = 0;
+
+// Dynamic modes
+unsigned long    LastDynamicModeAction = 0; // to store the last time an dynamic mode action was performed, allowing timed effects
+unsigned long DynamicModeStep; // to keep track of steps in dynamic modes. Not a byte to allow more than 255 steps
 
 // PRESETS
 // best RGB for the balloons: { 213, 0, 0, 213, 0, 0, 213, 0, 0, 213, 0, 0, 255, 255, 0, 255, 255, 0, 255, 255, 0, 255, 255, 0, 54, 59, 206, 54, 59, 206, 54, 59, 206, 54, 59, 206, }
@@ -149,7 +153,8 @@ void loop()
   //  Start of loop housekeeping, and feedback
   ++LoopIteration;
   if (LoopBlinkOn) {
-  LoopBlink(LoopIteration);}
+    LoopBlink(LoopIteration);
+  }
   PrevLoopMillis = LoopStartMillis;
   LoopStartMillis = millis();
   BytesInBuffer = Serial.available();
@@ -269,11 +274,11 @@ void loop()
       }
 
     case 6: {
-        rainbow(20); 
+        rainbow(20);
         break;
       }
     case 7: {
-       rainbowCycle(20);
+        rainbowCycle(20);
         break;
       }
 
@@ -513,7 +518,7 @@ void SetDiagnostic() //Mode 99 is CONFIG. Bytes set: Diagnostic, Delay
   LoopBlinkOn = ReadInBuffer[5];
   IRDiag = ReadInBuffer[6];
 
-  
+
   Serial.setTimeout(CommsTimeout);
   Serial.print("[ Diagnostic set to: ");
   Serial.println(Diagnostic);
@@ -529,8 +534,9 @@ void ReadIRRemote() {
   if (irrecv.decode(&results)) {
     go = 1;
     if (IRDiag) {
-    Serial.print("(");
-    Serial.println(results.value, HEX); }
+      Serial.print("(");
+      Serial.println(results.value, HEX);
+    }
     irrecv.resume(); // Receive the next value
   }
   if ( (millis() - LastIRReceived) > IRMuteTime) {
@@ -601,34 +607,39 @@ void ArrayToPixels(byte Array[]) {
 // The colours are a transition r - g - b - back to r.
 uint32_t Wheel(byte WheelPos) {
   WheelPos = 255 - WheelPos;
-  if(WheelPos < 85) {
-   return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  } else if(WheelPos < 170) {
+  if (WheelPos < 85) {
+    return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  } else if (WheelPos < 170) {
     WheelPos -= 85;
-   return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+    return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
   } else {
-   WheelPos -= 170;
-   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+    WheelPos -= 170;
+    return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
   }
 }
 void rainbow(uint8_t wait) {
-  uint16_t i, j;
+  uint16_t i;
 
-  for(j=0; j<256; j++) {
-    for(i=0; i<strip.numPixels(); i++) {
-      strip.setPixelColor(i, Wheel((i+j) & 255));
+  if ((LoopStartMillis - LastDynamicModeAction) > wait) { //is it time to update?
+    LastDynamicModeAction = LoopStartMillis;
+    DynamicModeStep++;
+
+    if (DynamicModeStep > 255) {
+      DynamicModeStep = 0;
+    }
+    for (i = 0; i < strip.numPixels(); i++) {
+      strip.setPixelColor(i, Wheel((i + DynamicModeStep) & 255));
     }
     strip.show();
-    delay(wait);
-  }
-}
+  } //end it's time to update
+}// end rainbow
 
 // Slightly different, this makes the rainbow equally distributed throughout
 void rainbowCycle(uint8_t wait) {
   uint16_t i, j;
 
-  for(j=0; j<256*5; j++) { // 5 cycles of all colors on wheel
-    for(i=0; i< strip.numPixels(); i++) {
+  for (j = 0; j < 256 * 5; j++) { // 5 cycles of all colors on wheel
+    for (i = 0; i < strip.numPixels(); i++) {
       strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
     }
     strip.show();
