@@ -89,12 +89,14 @@ byte IRModeModeTable[10] = { 20, 21, 22, 23, 6, 7, 1, 20,21, 22 }; // determines
 
 //DIAGNOSTIC TOOLS
 byte Diagnostic = 0;                // switches on all kinds of diagnostic feedback from various locations in the program
-unsigned long Slowdown = 5;      // Delay value (ms) added to each loop, only in 'Diagnostic' mode to allow inspecting the data coming back over serial
+unsigned long Slowdown = 5;         // Delay value (ms) added to each loop, only in 'Diagnostic' mode to allow inspecting the data coming back over serial
 byte LoopIteration = 0;             // to track loop iterations
 unsigned long PrevLoopMillis = 0;  // start time previous main loop, allows calculating how long loops take to finish
 int LooptimeDiag = 0;              // minimal feedback for checking efficiency: only feeds back looptime
 int ArrayDiag = 0;                 // if switched on, prints all arrays every cycle                 // Delay value (ms) added to each loop, only in 'Diagnostic' mode to allow inspecting the data coming back over serial
-unsigned long msTable[10] = {0, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000}; //Delay values in ms to 'Slow Down' program for diagnostic purposes
+byte LoopBlinkOn = 0;             //Loopblinker shows a blink every loop. Which can be helpful, but also annoying
+byte  IRDiag = 1;                 //feedback what the IR sensor is seeing. Or not
+unsigned long msTable[15] = {0, 1, 2, 5, 10, 20, 50, 100, 200, 300, 500, 1000, 2000, 3000, 5000}; //Delay values in ms to 'Slow Down' program for diagnostic purposes
 
 // SERIAL Comms- required for the core functionality of the Serial communication
 const int MaxInputSize = 36;     // the maximum length of input data the sketch accepts. Keep it to the minimum required to save memory
@@ -146,7 +148,8 @@ void loop()
 {
   //  Start of loop housekeeping, and feedback
   ++LoopIteration;
-  LoopBlink(LoopIteration);
+  if (LoopBlinkOn) {
+  LoopBlink(LoopIteration);}
   PrevLoopMillis = LoopStartMillis;
   LoopStartMillis = millis();
   BytesInBuffer = Serial.available();
@@ -498,15 +501,19 @@ void SetDiagnostic() //Mode 99 is CONFIG. Bytes set: Diagnostic, Delay
 { Serial.println("[ Entering Diagnostic change");
   Diagnostic = ReadInBuffer[0];
   int i = ReadInBuffer[1];
-  if (i < 10) {
+  if (i < 15) {
     Slowdown = msTable[i];
   }
   else
-  { Serial.print("[ ERROR: Slowdown value > 9");
+  { Serial.print("[ ERROR: Slowdown value > 15");
   }
   LooptimeDiag = ReadInBuffer[2];
   ArrayDiag = ReadInBuffer[3];
   CommsTimeout = msTable[4];
+  LoopBlinkOn = ReadInBuffer[5];
+  IRDiag = ReadInBuffer[6];
+
+  
   Serial.setTimeout(CommsTimeout);
   Serial.print("[ Diagnostic set to: ");
   Serial.println(Diagnostic);
@@ -521,8 +528,9 @@ void ReadIRRemote() {
   int go = 0;
   if (irrecv.decode(&results)) {
     go = 1;
+    if (IRDiag) {
     Serial.print("(");
-    Serial.println(results.value, HEX);
+    Serial.println(results.value, HEX); }
     irrecv.resume(); // Receive the next value
   }
   if ( (millis() - LastIRReceived) > IRMuteTime) {
