@@ -59,34 +59,37 @@
   100-199  Continuous modes (ContMode): Modes that have time-based effects and need to be visited every loop. until the mode is changed, we want the program to keep executing this mode.
 
 **/
+//Hardware: PINS
+const byte ArduinoLedPin =  13  ;   // NOT the NeoPixel data pin!! the number of the Arduino LED pin - it's blinking helps seeing if the program runs
+const byte IRBusyLedPin =  12  ;   // NOT the NeoPixel data pin!! the number of the Arduino LED pin - it's blinking helps seeing if the program runs
+const byte IRrecv_PIN = 11; // Remote control receive pin. using TSOP4838, with the sensor facing you, legs down, left to right: Signal out (connect to pin 10), GND, IN (3.3V)
+#define NeoPixel_PIN 10 //String of NeoPixels connected here
+
 
 //LED SETUP
 #include <Adafruit_NeoPixel.h>
 #include <IRremote.h> // make sure the Robot IRRemote  from the Java folder (inside max.app) has been removed
-#define PIN 11
+
 const  int nLEDs = 12; // Number of RGB LEDs:
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(nLEDs, PIN, NEO_RGB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(nLEDs, NeoPixel_PIN, NEO_RGB + NEO_KHZ800);
 
 //PROGRAM CONTROL
-const byte ArduinoLedPin =  13  ;   // NOT the NeoPixel data pin!! the number of the Arduino LED pin - it's blinking helps seeing if the program runs
-const byte IRBusyLedPin =  8  ;   // NOT the NeoPixel data pin!! the number of the Arduino LED pin - it's blinking helps seeing if the program runs
 unsigned long LoopStartMillis = 0;  // start time current main loop
 unsigned long CommsTimeout = 1000;    // How long to wait for expected bytes to arrive
 
 //IRRemote
-int IRrecv_PIN = 10; // Remote control receive pin. using TSOP4838, with the sensor facing you, legs down, left to right: Signal out (connect to pin 10), GND, IN (3.3V)
 IRrecv irrecv(IRrecv_PIN);
 decode_results results;
 byte IRModeState = 0;
 byte PrevIRModeState = 0; // To carry over the previous mode to be able to iterate through table
 unsigned long LastIRReceived = 0;
-unsigned long IRMuteTime = 300; //once a button click is read, it's ignored for ButtenClickTimer ms
-byte IRModeModeTable[10] = { 20, 21, 22, 23, 24, 1, 20, 21, 22, 23 }; // determines which presets, and in what order are cycled
+unsigned long IRMuteTime = 800; //once a button click is read, it's ignored for ButtenClickTimer ms
+byte IRModeModeTable[10] = { 20, 21, 22, 23, 6, 7, 1, 20,21, 22 }; // determines which presets, and in what order are cycled
 
 
 //DIAGNOSTIC TOOLS
-byte Diagnostic = 10;                // switches on all kinds of diagnostic feedback from various locations in the program
-unsigned long Slowdown = 0;      // Delay value (ms) added to each loop, only in 'Diagnostic' mode to allow inspecting the data coming back over serial
+byte Diagnostic = 0;                // switches on all kinds of diagnostic feedback from various locations in the program
+unsigned long Slowdown = 5;      // Delay value (ms) added to each loop, only in 'Diagnostic' mode to allow inspecting the data coming back over serial
 byte LoopIteration = 0;             // to track loop iterations
 unsigned long PrevLoopMillis = 0;  // start time previous main loop, allows calculating how long loops take to finish
 int LooptimeDiag = 0;              // minimal feedback for checking efficiency: only feeds back looptime
@@ -109,10 +112,11 @@ byte TempMode = 0; // temporary storage for 'Mode' until data is validated
 byte DataLength = 0;
 
 // PRESETS
-byte STATE20[nLEDs * 3] = { 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 1, 0, 255, 1, 0, 255, 1, 0, 255, 1, 0, 255, 238, 244, 0, 238, 244, 0, 238, 244, 0, 238, 244, 0, }; // 8 x 3 (8x RGB)
-byte STATE21[nLEDs * 3] = { 254, 191, 147, 1, 255, 255, 73, 0, 137, 1, 255, 255, 254, 191, 147, 1, 255, 255, 73, 0, 137, 1, 255, 255, 254, 191, 147, 1, 255, 255, 73, 0, 137, 1, 255, 255, };
-byte STATE22[nLEDs * 3] = { 6, 47, 0, 102, 17, 0, 6, 47, 0, 1, 255, 255, 6, 47, 0, 102, 17, 0, 6, 47, 0, 1, 255, 255, 6, 47, 0, 102, 17, 0, 6, 47, 0, 1, 255, 255, };
-byte STATE23[nLEDs * 3] = { 5, 23, 0, 0, 120, 2, 36, 115, 0, 112, 112, 0, 5, 23, 0, 0, 120, 2, 36, 115, 0, 112, 112, 0, 5, 23, 0, 0, 120, 2, 36, 115, 0, 5, 23, 0, };
+// best RGB for the balloons: { 213, 0, 0, 213, 0, 0, 213, 0, 0, 213, 0, 0, 255, 255, 0, 255, 255, 0, 255, 255, 0, 255, 255, 0, 54, 59, 206, 54, 59, 206, 54, 59, 206, 54, 59, 206, }
+byte STATE20[nLEDs * 3] = { 213, 0, 0, 213, 0, 0, 213, 0, 0, 213, 0, 0, 255, 255, 0, 255, 255, 0, 255, 255, 0, 255, 255, 0, 54, 59, 206, 54, 59, 206, 54, 59, 206, 54, 59, 206, };
+byte STATE21[nLEDs * 3] = { 196, 114, 144, 196, 114, 144, 196, 114, 144, 196, 114, 144, 196, 114, 144, 196, 114, 144, 196, 114, 144, 196, 114, 144, 196, 114, 144, 196, 114, 144, 196, 114, 144, 196, 114, 144, };
+byte STATE22[nLEDs * 3] = { 172, 170, 0, 172, 170, 0, 172, 170, 0, 172, 170, 0, 172, 170, 0, 172, 170, 0, 172, 170, 0, 172, 170, 0, 172, 170, 0, 172, 170, 0, 172, 170, 0, 172, 170, 0, };
+byte STATE23[nLEDs * 3] = { 255, 5, 0, 0, 255, 0, 139, 1, 49, 172, 170, 0, 255, 5, 0, 0, 255, 0, 139, 1, 49, 172, 170, 0, 255, 5, 0, 0, 255, 0, 139, 1, 49, 172, 170, 0, };
 byte STATE24[nLEDs * 3] = { 46, 0, 69, 46, 0, 69, 46, 0, 69, 46, 0, 69, 0, 47, 20, 0, 47, 20, 0, 47, 20, 0, 47, 20, 54, 53, 0, 54, 53, 0, 54, 53, 0, 54, 53, 0, };
 
 //**********************************************************
@@ -132,6 +136,8 @@ void setup() {
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
   Serial.println("]0"); // start value for host program: 0 bytes in buffer
+
+  IRModeState = 0;
 }
 //**********************************************************
 //  *************         M A I N       **********************
@@ -210,7 +216,7 @@ void loop()
         Mode = 0;
         break;
       }
-    case 2: {// Blue
+    case 2: {// All Blue
         //one-off mode: so something, then set mode to '0' so no further changes
         for (int i = 0; i < strip.numPixels(); i++) {
           strip.setPixelColor(i, 255);
@@ -233,10 +239,10 @@ void loop()
 
         //one-off mode: so something, then set mode to '0' so no further changes
         for (int i = 0; i < 12; i++) {
-          strip.setPixelColor(i, strip.Color((i % 2) * 255, i * 10, (255 - i * 20)));
+          strip.setPixelColor(i, strip.Color((-255 + (LoopIteration % 516)), (516 - (LoopIteration % 516)), 0));
         }
         strip.show();              // Refresh LED states
-        Mode = 0;
+        //        Mode = 0;
         break;
       }
     case 5: { //manual every LED different
@@ -259,6 +265,14 @@ void loop()
         break;
       }
 
+    case 6: {
+        rainbow(20); 
+        break;
+      }
+    case 7: {
+       rainbowCycle(20);
+        break;
+      }
 
     case 11: {// 12 RGB values
 
@@ -525,6 +539,31 @@ void ReadIRRemote() {
     }
   }
 
+  /* THIS CODE WORKS WITH *ANY* Remote, any received IR signal just moves on to the next Mode in "IRModeModeTable'
+    int go = 0;
+    if (irrecv.decode(&results)) {
+    go = 1;
+    Serial.print("(");
+    Serial.println(results.value, HEX);
+    irrecv.resume(); // Receive the next value
+    }
+    if ( (millis() - LastIRReceived) > IRMuteTime) {
+    digitalWrite(IRBusyLedPin, LOW);
+
+    if (go) {
+      digitalWrite(IRBusyLedPin, HIGH);
+      IRModeState++;
+      if (IRModeState > 9) {
+        IRModeState = 0;
+      }
+      Mode = IRModeModeTable[IRModeState];
+      LastIRReceived = millis();
+    }
+    }
+    //END 'ANY REMOTE' code
+  */
+
+
 }
 
 // ******* LED FUNCTIONS
@@ -548,6 +587,49 @@ void ArrayToPixels(byte Array[]) {
     strip.show();              // Refresh LED states
   }
 }
+
+
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(byte WheelPos) {
+  WheelPos = 255 - WheelPos;
+  if(WheelPos < 85) {
+   return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  } else if(WheelPos < 170) {
+    WheelPos -= 85;
+   return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  } else {
+   WheelPos -= 170;
+   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  }
+}
+void rainbow(uint8_t wait) {
+  uint16_t i, j;
+
+  for(j=0; j<256; j++) {
+    for(i=0; i<strip.numPixels(); i++) {
+      strip.setPixelColor(i, Wheel((i+j) & 255));
+    }
+    strip.show();
+    delay(wait);
+  }
+}
+
+// Slightly different, this makes the rainbow equally distributed throughout
+void rainbowCycle(uint8_t wait) {
+  uint16_t i, j;
+
+  for(j=0; j<256*5; j++) { // 5 cycles of all colors on wheel
+    for(i=0; i< strip.numPixels(); i++) {
+      strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
+    }
+    strip.show();
+    delay(wait);
+  }
+}
+
+
+
 
 /* MAX/MSP control program code
 
