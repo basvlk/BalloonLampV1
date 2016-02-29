@@ -84,7 +84,7 @@ byte IRModeState = 0;
 byte PrevIRModeState = 0; // To carry over the previous mode to be able to iterate through table
 unsigned long LastIRReceived = 0;
 unsigned long IRMuteTime = 800; //once a button click is read, it's ignored for ButtenClickTimer ms
-byte IRModeModeTable[10] = { 1, 20, 22, 23, 6, 7, 3, 1, 1,1 }; // determines which presets, and in what order are cycled
+byte IRModeModeTable[10] = { 1, 20, 22, 23, 6, 7, 3, 1, 1, 1 }; // determines which presets, and in what order are cycled
 
 
 //DIAGNOSTIC TOOLS
@@ -176,6 +176,8 @@ void loop()
       if the mode doesn't require timing but is 'set and forget' (OnceMode), end the case with Mode = 0
       DO NOT FORGET to add the "break;" at the end
   */
+
+
   switch (Mode) {
     case 99: {
         SetDiagnostic();
@@ -388,15 +390,20 @@ void SerialReadInitial() { //SerialReadInitial checks if data is available, if i
         DiscardedBytes = 0;
         TempMode = Serial.read(); // Second Byte = Mode, stored temporarily
         DataLength = int(Serial.read()); // Third Byte is DataLength: #Bytes to follow
+        if (Diagnostic) {
+          Serial.print(F("[ INFO: the 3 initial Bytes have been read. TempMode: "));
+          Serial.print(TempMode);
+          Serial.print(F(" Datalength: "));
+          Serial.println(DataLength);
+        }
 
         // SHORT MESSAGE
         if ((DataLength == 0)) {//short 3-Byte message only
           Mode = TempMode;
           if (Diagnostic) {
-            Serial.print(F("[ INFO: the 3 initial Bytes have been read. After 255, Mode: "));
-            Serial.print(TempMode);
-            Serial.print(F(" Datalength: "));
-            Serial.println(DataLength);
+            Serial.println(F("[ INFO: short message only, reading complete "));
+            Serial.print(F("[ Mode: "));
+            Serial.println(Mode);
           }
         } // End first byte = 255
 
@@ -443,9 +450,12 @@ void SerialReadBulkData() { //SerialReadBulkData is only called when SerialReadI
   if (NextReadIndex == DataLength) { // valid data
     ReadingBulkData = 0; // reset 'Reading Data' flag, ready for new data
     Mode = TempMode ;
+
     ReadInBufferValid = 1;
     if (Diagnostic) {
-      Serial.println(F("[ Done Bulk reading, Buffer complete "));
+      Serial.println(F("[ Done Bulk reading. Mode Set"));
+      Serial.print(F("[ Mode: "));
+      Serial.println(Mode);;
     }
   }// end valid data
 }
@@ -486,7 +496,13 @@ void FeedbackToHost()
     Serial.print(F("[Bytes Discarded: "));
     Serial.println(DiscardedBytes);
     Serial.print(F("[ TempMode: "));
-    Serial.println(TempMode);
+    Serial.print(TempMode);
+    Serial.print(F("[, IRMode: "));
+    Serial.print(IRModeState);
+    Serial.print(F("[, Mode: "));
+    Serial.println(Mode);
+    Serial.print(F("[ IRModeState: "));
+    Serial.println(IRModeState);
     Serial.print(F("[ DataLength: "));
     Serial.println(DataLength);
     Serial.print(F("[ Reading Bulk data in progress: "));
@@ -495,8 +511,6 @@ void FeedbackToHost()
     Serial.println(ReadingBulkData);
     Serial.print(F("[ ReadRuns: "));
     Serial.println(ReadRuns);
-    Serial.print(F("[ Mode: "));
-    Serial.println(Mode);
     Serial.println(F("[ **** END  start-of-loop feedback"));
   } // end of full giagnostic feedback
   if (LooptimeDiag) {// lean feedback of looptime only
@@ -566,6 +580,14 @@ void ReadIRRemote() {
         IRModeState = 0;
       }
       Mode = IRModeModeTable[IRModeState];
+      if (Diagnostic) {
+        Serial.print(F("[ INFO: Mode changed through IR."));
+        Serial.print(F(" IRModeState: "));
+        Serial.println(IRModeState);
+        Serial.print(F(" Mode: "));
+        Serial.println(Mode);
+      }
+
       LastIRReceived = millis();
     }
   }
