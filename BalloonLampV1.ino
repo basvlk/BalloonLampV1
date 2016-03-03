@@ -481,7 +481,7 @@ void FeedbackToHost()
   Serial.println(BytesInBuffer);
   //  }
 
-  if ((Diagnostic) && (!LooptimeDiag)) {// Only give full diagnostic feedback if LooptimeDiag is disabled
+  if ((Diagnostic) && (!LooptimeDiag) && (!IRDiag)) {// Only give full diagnostic feedback if LooptimeDiag is disabled
     Serial.print(F("[ **** BEGIN start-of-loop feedback for loop#: "));
     Serial.println(LoopIteration); Serial.print(F("[ Previous looptime: "));
     Serial.println((LoopStartMillis) - (PrevLoopMillis));
@@ -497,9 +497,9 @@ void FeedbackToHost()
     Serial.println(DiscardedBytes);
     Serial.print(F("[ TempMode: "));
     Serial.print(TempMode);
-    Serial.print(F("[, IRMode: "));
+    Serial.print(F(", IRMode: "));
     Serial.print(IRModeState);
-    Serial.print(F("[, Mode: "));
+    Serial.print(F(", Mode: "));
     Serial.println(Mode);
     Serial.print(F("[ IRModeState: "));
     Serial.println(IRModeState);
@@ -582,9 +582,9 @@ void ReadIRRemote() {
       Mode = IRModeModeTable[IRModeState];
       if (Diagnostic) {
         Serial.print(F("[ INFO: Mode changed through IR."));
-        Serial.print(F(" IRModeState: "));
+        Serial.println(F("[ IRModeState: "));
         Serial.println(IRModeState);
-        Serial.print(F(" Mode: "));
+        Serial.print(F("[ Mode: "));
         Serial.println(Mode);
       }
 
